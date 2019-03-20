@@ -1,88 +1,110 @@
 <?php
-// Edit these variables to meet your environment:
-$mysql_server = "localhost";
-$mysql_username = "bible";
-$mysql_password = "bible";
-$mysql_db = "bible"; // this is the default table name
-
+ini_set('display_errors', 1);/// ERROR LOGGING 
+error_reporting(E_ALL);/// ERROR LOGGING 
 $default_text = "John 3:16";
 
 /*** DO NOT EDIT BELOW THIS LINE (Unless you know what you are doing :) ) ***/
-
-$mysqli = new mysqli($mysql_server, $mysql_username, $mysql_password, $mysql_db);
-
-/*
- * This is the "official" OO way to do it,
- * BUT $connect_error was broken until PHP 5.2.9 and 5.3.0.
- */
-if ($mysqli->connect_error) {
-    die('Connect Error (' . $mysqli->connect_errno . ') '
-            . $mysqli->connect_error);
-}
-
-require("bible_to_sql.php");
-//echo "b: ".$_GET['b']." r: ".$_GET['r']."<br />";
-
+require("servant.php");
 
 //split at commas
 $references = explode(",",$_GET['b']);
-
+//get translation 
+$translation=($_GET['t']);
 
 ?>
 <html>
 <head>
 <title>Bible Search</title>
+<link href="https://fonts.googleapis.com/css?family=Patua+One|Special+Elite" rel="stylesheet">
+<style type="text/css">
+	h5{font-size: 2rem; font-family: 'Patua One', cursive;}
+	.versetext{font-size: 1.8rem; font-family: 'Special Elite', cursive;}
+</style>
 </head>
-<body>
-<header>
-<form action="index.php" action="GET">
-<!-- TODO: Bible dropdown. Defaults to KJV. -->
-<label for="b">Reference(s): </label><input type="text" name="b" value="<?php if ($_GET['b']) { echo $_GET['b']; } else { echo $default_text; } ?>" /><input type="submit" value="Search" /><br />
-
-</form>
+<body style="height: 100%; width: 100%;margin:0;">
+<header  style="display:block;background: #4799B0; width: 100%;padding: 10px;border-bottom:1px solid #AAA;margin: 0 0 10px;">
+	<h1 style="color:#FFF;">Bible Search</h1>
+	
 </header>
-<main>
+<main style="padding: 10px;">
+	<h2>Via PHP</h2>
+	<!-- Form -->
+	<form action="index.php" action="GET">
+		<!-- verse(s) -->
+		<label for="b">Reference(s): </label><input type="text" name="b" value="<?php if ($_GET['b']) { echo $_GET['b']; } else { echo $default_text; } ?>" />
+		<!-- translation -->
+		<select for="t" id="translation" name="t">
+		  <option value="t_kjv">King James Version</option>
+		  <option value="t_asv">American Standard Version</option>
+		  <option value="t_dby">Darby English Bible</option>
+		  <option value="t_bbe">Bible in Basic English</option>
+		  <option value="t_web">Webster's Bible</option>
+		  <option value="t_web">World English Bible</option>
+		  <option value="t_ylt">Young's Literal Translation</option>
+		</select>
+		<!-- submit -->
+		<input type="submit" value="submit" /><br />
+	</form>
+	<!-- End Form -->
+
 	<?php 
 	//return results
 	
 	foreach ($references as $r) {
-				
-		$ret = new bible_to_sql($r, NULL, $mysqli);
-		//echo "sql query: " . $ret->sql() . "<br />";
-		//SELECT * FROM bible.t_kjv WHERE id BETWEEN 01001001 AND 02001005
-		$sqlquery = "SELECT * FROM bible.t_kjv WHERE " . $ret->sql();
-		$stmt = $mysqli->stmt_init();
-		$stmt->prepare($sqlquery);
-		$stmt->execute();
-        $result = $stmt->get_result();
-        if ($result->num_rows > 0) {
-			//$row = $result->fetch_array(MYSQLI_NUM);
-			//0: ID 1: Book# 2:Chapter 3:Verse 4:Text
-			
-			print "<article><header><h1>{$ret->getBook()} {$ret->getChapter()}</h1></header>";
-			
-            while ($row = $result->fetch_row()) {
-			 print "<div class=\"versenum\">${row[3]}</div> <div class=\"versetext\">${row[4]}</div><br />";
-			}
-			print "</article>";
-			
-        } else {
-			print "Did not understand your input.";
-		}
-		$stmt->close();
+		//stripslashes if any from manual input
+		$verse = stripslashes($r);
+		// create new object for making query
+		$getverse = new Librarian;
+		// if its really a bible verse this will not error
+		$getverse ->prepare($verse);
+		// make the mysqli query with specified translation
+		// only starts if prepare was successful
+		$getverse->translation($translation);
 	}
-
-
-
 	?>
+	<hr><hr>
+
+	<h2>Via AJAX</h2>
+	<button onclick="showTexts('John 3:16')">John 3:16 </button>
+	<button onclick="showTexts('Revelation 22:12')">Revelation 22:12</button>
+
+	<div id="showSubjects">
+	    <h6>Click button <span>to see it here.</span></h6>
+	</div>	
+	<div id="showTexts"></div>
 </main>
-<footer>
-<form action="index.php" action="GET">
-<!-- TODO: Bible dropdown. Defaults to KJV. -->
-<label for="b">Reference(s): </label><input type="text" name="b" value="<?php if ($_GET['b']) { echo $_GET['b']; } else { echo "John 3:16"; } ?>" /><input type="submit" value="Search" /><br />
+<footer style="display:block;position:absolute;bottom: 0;background: #4799B0; width: 100%;padding: 10px;border-top:1px solid #AAA;">
+	<form>
 
 </form>
+
 </footer>
+<script>
+	/* MySQL DB Query via AJAX */
+
+	// receives a human readable string. ie: "Job 32:8"
+	function showTexts(verse) {
+	        if (window.XMLHttpRequest) {
+	            // code for IE7+, Firefox, Chrome, Opera, Safari
+	            xmlhttp = new XMLHttpRequest();
+	        } else {
+	            // code for IE6, IE5
+	            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+	        }
+	        xmlhttp.onreadystatechange = function() {
+	            if (this.readyState == 4 && this.status == 200) {
+	                document.getElementById("showTexts").innerHTML = this.responseText;
+	            }
+	        };
+	        // prepare to query the ajax.php page
+	        xmlhttp.open("GET","./ajax.php?b="+verse,true);
+	        // send query
+	        xmlhttp.send();
+	        // remove the "click on" prompt
+	        document.getElementById("showSubjects").style.display = "none";
+	}
+
+	
+</script>
 </body>
 </html>
-<?php $mysqli->close(); ?>
