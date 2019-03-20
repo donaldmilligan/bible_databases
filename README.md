@@ -1,4 +1,9 @@
-[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=W8RKPHPUF398G)
+This fork works with PHP7
+============
+
+1. This fork has been updated to work on PHP7 with a new mysql handler
+2. An Ajax Query feature has been added to the web examples
+3. a dropdown has been added for selecting different translations on the web examples. 
 
 Bible Versions and Cross-Reference Databases: mysql, sqlite, xml, csv, json.
 ===============
